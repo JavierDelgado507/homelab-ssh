@@ -1357,19 +1357,19 @@ class TerminalScreenState extends State<TerminalScreen>
     return GestureDetector(
       onTap: () => _sendKey(key),
       child: Container(
-        constraints: const BoxConstraints(minWidth: 42),
-        height: 38,
+        constraints: const BoxConstraints(minWidth: 36),
+        height: 32,
         margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
         decoration: BoxDecoration(
           color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
         ),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 7),
         child: key.icon != null
-            ? Icon(key.icon, size: 18, color: labelColor ?? kTextPri)
+            ? Icon(key.icon, size: 15, color: labelColor ?? kTextPri)
             : Text(key.label,
                 style: TextStyle(
-                    fontSize: 13, color: labelColor ?? kTextPri,
+                    fontSize: 12, color: labelColor ?? kTextPri,
                     fontFamily: 'JetBrainsMono', height: 1)),
       ),
     );
@@ -1511,6 +1511,7 @@ class TerminalScreenState extends State<TerminalScreen>
                     height: 30,
                     margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
+                    constraints: const BoxConstraints(minWidth: 36),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1560,7 +1561,7 @@ class TerminalScreenState extends State<TerminalScreen>
             ),
           ),
           SizedBox(
-            height: 46,
+            height: 40,
             child: TabBarView(
               controller: _tabCtrl,
               children: [
