@@ -163,10 +163,12 @@ class _AppLockGateState extends State<AppLockGate>
     if (state == AppLifecycleState.paused) {
       _pausedAt = DateTime.now();
     } else if (state == AppLifecycleState.resumed && !_locked) {
-      final away = _pausedAt == null
-          ? Duration.zero
-          : DateTime.now().difference(_pausedAt!);
-      if (away > const Duration(minutes: 5)) {
+      // Consumir el sello: el diálogo biométrico dispara sus propios
+      // resumed y, sin esto, cada uno re-bloqueaba con el sello antiguo.
+      final pausedAt = _pausedAt;
+      _pausedAt = null;
+      if (pausedAt != null &&
+          DateTime.now().difference(pausedAt) > const Duration(minutes: 5)) {
         StorageService.getAppLock().then((enabled) {
           if (enabled && mounted) {
             setState(() => _locked = true);
@@ -195,10 +197,16 @@ class _AppLockGateState extends State<AppLockGate>
     if (_checking) {
       return const Scaffold(backgroundColor: kBg, body: SizedBox());
     }
-    if (!_locked) return widget.child;
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Center(
+    // El candado es una CAPA sobre la app, no un reemplazo: debajo todo
+    // sigue montado y las sesiones SSH sobreviven al bloqueo.
+    return Stack(
+      children: [
+        widget.child,
+        if (_locked)
+          Positioned.fill(
+            child: Scaffold(
+              backgroundColor: kBg,
+              body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -216,7 +224,10 @@ class _AppLockGateState extends State<AppLockGate>
             ),
           ],
         ),
-      ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
