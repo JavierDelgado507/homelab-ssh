@@ -1361,6 +1361,10 @@ class TerminalScreenState extends State<TerminalScreen>
   Widget _buildKeyboard() {
     return Container(
       color: kSurface,
+      // Cubre la zona del gesto de navegación con el color de la barra
+      // (cuando el teclado está abierto, padding.bottom pasa a 0 solo)
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
