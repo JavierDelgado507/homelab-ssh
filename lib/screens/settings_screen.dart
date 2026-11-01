@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../main.dart';
 import '../services/i18n.dart';
+import '../services/term_themes.dart';
 import '../services/backup_service.dart';
 import '../services/storage_service.dart';
 import 'hostkeys_screen.dart';
@@ -35,6 +36,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _pickTheme() async {
+    final sel = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(tr('Terminal theme'),
+            style: const TextStyle(color: kTextPri, fontSize: 16)),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final e in TermThemes.themes.entries)
+              ListTile(
+                onTap: () => Navigator.pop(ctx, e.key),
+                leading: Container(
+                  width: 52,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: e.value.background,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: kDivider),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final c in [
+                        e.value.red,
+                        e.value.green,
+                        e.value.blue,
+                        e.value.magenta
+                      ])
+                        Container(
+                          width: 7,
+                          height: 7,
+                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                          decoration:
+                              BoxDecoration(color: c, shape: BoxShape.circle),
+                        ),
+                    ],
+                  ),
+                ),
+                title: Text(e.key,
+                    style: TextStyle(
+                        color: TermThemes.notifier.value == e.key
+                            ? kAccent
+                            : kTextPri,
+                        fontSize: 15)),
+                trailing: TermThemes.notifier.value == e.key
+                    ? const Icon(Icons.check, color: kAccent, size: 18)
+                    : null,
+              ),
+          ],
+        ),
+      ),
+    );
+    if (sel != null) {
+      await TermThemes.set(sel);
+      if (mounted) setState(() {});
+    }
   }
 
   // ── Biometric lock ──────────────────────────────────────────────────────────
@@ -254,6 +318,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await Tr.set(Tr.es ? 'en' : 'es');
               if (mounted) setState(() {});
             },
+          ),
+          _tile(
+            Icons.palette_outlined,
+            const Color(0xFFFF8E53),
+            tr('Terminal theme'),
+            TermThemes.notifier.value,
+            _pickTheme,
           ),
           _tile(
             Icons.info_outline,

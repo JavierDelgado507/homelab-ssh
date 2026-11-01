@@ -8,6 +8,7 @@ import 'screens/settings_screen.dart';
 import 'screens/snippets_screen.dart';
 import 'screens/terminal_tabs_screen.dart';
 import 'services/i18n.dart';
+import 'services/term_themes.dart';
 import 'services/ssh_keepalive_service.dart';
 import 'services/storage_service.dart';
 
@@ -36,6 +37,7 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(['JetBrains Mono'], ofl);
   });
   await Tr.load();
+  await TermThemes.load();
   SshKeepaliveService.init();
   runApp(const HomelabSshApp());
 }

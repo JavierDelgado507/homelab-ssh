@@ -94,6 +94,20 @@ class StorageService {
       _storage.write(
           key: 'cmd_history', value: jsonEncode(history.take(200).toList()));
 
+  // ── Preferencias del terminal ──────────────────────────────────────────────
+  static Future<double?> getFontSize() async {
+    final raw = await _storage.read(key: 'font_size');
+    return raw == null ? null : double.tryParse(raw);
+  }
+
+  static Future<void> saveFontSize(double size) =>
+      _storage.write(key: 'font_size', value: size.toString());
+
+  static Future<String?> getTermTheme() => _storage.read(key: 'term_theme');
+
+  static Future<void> saveTermTheme(String name) =>
+      _storage.write(key: 'term_theme', value: name);
+
   // ── Idioma de la interfaz ('en' | 'es') ────────────────────────────────────
   static Future<String?> getLang() => _storage.read(key: 'lang');
 

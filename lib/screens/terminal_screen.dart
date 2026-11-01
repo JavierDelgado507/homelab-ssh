@@ -12,10 +12,13 @@ import 'package:xterm/xterm.dart';
 import '../main.dart';
 import '../models/host.dart';
 import '../services/i18n.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ssh_connect_service.dart';
+import '../services/term_themes.dart';
 import '../services/storage_service.dart';
 import '../services/ssh_keepalive_service.dart';
 import 'sftp_screen.dart';
+import 'terminal_tabs_screen.dart' show TabsHub;
 import 'snippets_screen.dart';
 
 // ── Secuencias de escape ─────────────────────────────────────────────────────
@@ -42,31 +45,6 @@ const _kF9  = '\x1b[20~'; const _kF10= '\x1b[21~';
 const _kF11 = '\x1b[23~'; const _kF12= '\x1b[24~';
 // Teclas Fn en popup (F13-F20 eliminadas)
 
-const _termTheme = TerminalTheme(
-  cursor:       Color(0xFF4ECDC4),
-  selection:    Color(0x504ECDC4),
-  foreground:   Color(0xFFCDD6F4),
-  background:   Color(0xFF0A0E1A),
-  black:        Color(0xFF1E2740),
-  red:          Color(0xFFFF6B6B),
-  green:        Color(0xFF4ECDC4),
-  yellow:       Color(0xFFFFD93D),
-  blue:         Color(0xFF5B8AF5),
-  magenta:      Color(0xFFC77DFF),
-  cyan:         Color(0xFF4FC3F7),
-  white:        Color(0xFFCDD6F4),
-  brightBlack:  Color(0xFF45506A),
-  brightRed:    Color(0xFFFF8E8E),
-  brightGreen:  Color(0xFF6BDED8),
-  brightYellow: Color(0xFFFFE566),
-  brightBlue:   Color(0xFF7BA4FF),
-  brightMagenta:Color(0xFFD89FFF),
-  brightCyan:   Color(0xFF72D4F9),
-  brightWhite:  Color(0xFFE8EAF0),
-  searchHitBackground:        Color(0x804ECDC4),
-  searchHitBackgroundCurrent: Color(0xFF4ECDC4),
-  searchHitForeground:        Color(0xFF0A0E1A),
-);
 
 class _Key {
   final String label;
@@ -219,8 +197,20 @@ class TerminalScreenState extends State<TerminalScreen>
     _autoReconnect = true;
     _connect();
   }
-  void zoomIn()     => setState(() => _fontSize = (_fontSize + 1).clamp(8.0, 28.0));
-  void zoomOut()    => setState(() => _fontSize = (_fontSize - 1).clamp(8.0, 28.0));
+  void zoomIn()     => _setFontSize(_fontSize + 1);
+  void zoomOut()    => _setFontSize(_fontSize - 1);
+
+  // Tamaño de letra persistente (compartido entre pestañas vía caché estática)
+  static double? _fontSizeCache;
+  Timer? _fontSaveTimer;
+
+  void _setFontSize(double v) {
+    setState(() => _fontSize = v.clamp(8.0, 28.0));
+    _fontSizeCache = _fontSize;
+    _fontSaveTimer?.cancel();
+    _fontSaveTimer = Timer(const Duration(milliseconds: 600),
+        () => StorageService.saveFontSize(_fontSize));
+  }
   void requestFocus() => _focusNode.requestFocus();
 
   void disconnect() {
@@ -326,6 +316,18 @@ class TerminalScreenState extends State<TerminalScreen>
     if (_cmdHistory == null) {
       StorageService.getCmdHistory().then((h) => _cmdHistory ??= h);
     }
+
+    if (_fontSizeCache != null) {
+      _fontSize = _fontSizeCache!;
+    } else {
+      StorageService.getFontSize().then((v) {
+        if (v != null && mounted) {
+          _fontSizeCache = v;
+          setState(() => _fontSize = v);
+        }
+      });
+    }
+    TermThemes.notifier.addListener(_onThemeChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
   }
@@ -468,6 +470,8 @@ class TerminalScreenState extends State<TerminalScreen>
   @override
   void dispose() {
     _userClosed = true;
+    TermThemes.notifier.removeListener(_onThemeChanged);
+    _fontSaveTimer?.cancel();
     _reconnectTimer?.cancel();
     _flushTimer?.cancel();
     _stopAutoScroll();
@@ -810,6 +814,51 @@ class TerminalScreenState extends State<TerminalScreen>
       _sendBytes(Uint8List.fromList(utf8.encode(data)));
 
   void _refocus() => _focusNode.requestFocus();
+
+  void _onThemeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // Abrir con un toque las URLs que aparezcan en la salida del terminal
+  static final _urlRe = RegExp(r'https?://[^\s' r"'" r'"<>\[\]{}|\\^`]+');
+
+  Future<void> _maybeOpenUrl(Offset pos) async {
+    try {
+      final render = _terminalViewKey.currentState?.renderTerminal;
+      if (render == null) return;
+      final cell = render.getCellOffset(pos);
+      if (cell.y >= _terminal.buffer.lines.length) return;
+      final line = _terminal.buffer.lines[cell.y].getText();
+      for (final m in _urlRe.allMatches(line)) {
+        if (cell.x < m.start || cell.x >= m.end) continue;
+        var url = m.group(0)!;
+        while (url.isNotEmpty && '.,;:)]'.contains(url[url.length - 1])) {
+          url = url.substring(0, url.length - 1);
+        }
+        final ok = await launchUrl(Uri.parse(url),
+            mode: LaunchMode.externalApplication);
+        if (!ok && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('Could not open the link'))));
+        }
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // Pantalla completa: oculta appbar, pestañas y barra de estado de Android
+  void _toggleFullscreen() {
+    final hub = TabsHub.instance;
+    hub.fullscreen = !hub.fullscreen;
+    if (hub.fullscreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: SystemUiOverlay.values);
+    }
+    hub.refresh();
+    if (mounted) setState(() {});
+  }
 
   void _sendKey(_Key key) {
     _clearLineBuf(); // flechas/Esc/etc. desalinean la línea rastreada
@@ -1342,6 +1391,25 @@ class TerminalScreenState extends State<TerminalScreen>
                     activeColor: const Color(0xFFFFD93D)),
                 const Spacer(),
                 GestureDetector(
+                  onTap: _toggleFullscreen,
+                  child: Container(
+                    height: 30,
+                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      TabsHub.instance.fullscreen
+                          ? Icons.fullscreen_exit
+                          : Icons.fullscreen,
+                      size: 17,
+                      color: TabsHub.instance.fullscreen ? kAccent : kTextSec,
+                    ),
+                  ),
+                ),
+                GestureDetector(
                   onTap: _copyScreen,
                   child: Container(
                     height: 30,
@@ -1462,7 +1530,7 @@ class TerminalScreenState extends State<TerminalScreen>
       key: _terminalViewKey,
       controller: _terminalController,
       focusNode: _focusNode,
-      theme: _termTheme,
+      theme: TermThemes.current,
       scrollController: _scrollCtrl,
       readOnly: !_kbOn,
       textStyle: TerminalStyle(
@@ -1513,8 +1581,7 @@ class TerminalScreenState extends State<TerminalScreen>
                   if (_activePointers.length == 2 && _pinchDist0 > 0) {
                     final pts = _activePointers.values.toList();
                     final dist = (pts[0] - pts[1]).distance;
-                    setState(() =>
-                        _fontSize = (_scaleStart * (dist / _pinchDist0)).clamp(8.0, 28.0));
+                    _setFontSize(_scaleStart * (dist / _pinchDist0));
                   } else if (_activePointers.length == 1 && prev != null && !_draggingHandle &&
                       // La pulsación larga ya creó una selección con este
                       // dedo: lo usa xterm para extenderla, aquí no se scrollea.
@@ -1535,6 +1602,10 @@ class TerminalScreenState extends State<TerminalScreen>
                   }
                 },
                 onPointerUp: (e) {
+                  final wasTap = !_isDragging.contains(e.pointer) &&
+                      !_draggingHandle &&
+                      _activePointers.length == 1 &&
+                      _terminalController.selection == null;
                   final wasScrollDrag = _isDragging.contains(e.pointer) &&
                       !_draggingHandle &&
                       (identical(_selAtDown[e.pointer],
@@ -1553,6 +1624,7 @@ class TerminalScreenState extends State<TerminalScreen>
                     }
                     _vTracker = null;
                   }
+                  if (wasTap) _maybeOpenUrl(e.localPosition);
                 },
                 onPointerCancel: (e) {
                   _activePointers.remove(e.pointer);
@@ -1673,8 +1745,7 @@ class TerminalScreenState extends State<TerminalScreen>
                     },
                     onScaleUpdate: (d) {
                       if (d.pointerCount >= 2) {
-                        setState(() =>
-                            _fontSize = (_scaleStart * d.scale).clamp(8.0, 28.0));
+                        _setFontSize(_scaleStart * d.scale);
                       } else {
                         _swipeX += d.focalPointDelta.dx;
                         _swipeY += d.focalPointDelta.dy;
@@ -1762,8 +1833,8 @@ class TerminalScreenState extends State<TerminalScreen>
     if (!widget.showAppBar) return _buildBody();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
-      resizeToAvoidBottomInset: true,
+      backgroundColor: TermThemes.current.background,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: kSurface,
         titleSpacing: 0,
@@ -1809,21 +1880,25 @@ class TerminalScreenState extends State<TerminalScreen>
           IconButton(
             icon: const Icon(Icons.text_decrease, size: 18, color: kTextSec),
             onPressed: () {
-              setState(() => _fontSize = (_fontSize - 1).clamp(8.0, 28.0));
+              _setFontSize(_fontSize - 1);
               _refocus();
             },
           ),
           IconButton(
             icon: const Icon(Icons.text_increase, size: 18, color: kTextSec),
             onPressed: () {
-              setState(() => _fontSize = (_fontSize + 1).clamp(8.0, 28.0));
+              _setFontSize(_fontSize + 1);
               _refocus();
             },
           ),
           const SizedBox(width: 4),
         ],
       ),
-      body: _buildBody(),
+      body: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: _buildBody(),
+      ),
     );
   }
 }

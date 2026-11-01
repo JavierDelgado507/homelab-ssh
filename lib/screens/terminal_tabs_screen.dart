@@ -3,6 +3,7 @@ import '../main.dart';
 import '../models/host.dart';
 import '../services/i18n.dart';
 import '../services/storage_service.dart';
+import '../services/term_themes.dart';
 import 'terminal_screen.dart';
 
 // Host especial para el shell local del dispositivo
@@ -37,7 +38,8 @@ class TabsHub extends ChangeNotifier {
 
   final tabs = <TerminalTab>[];
   int active = 0;
-  bool showing = false; // true → se ve la pantalla de terminales
+  bool showing = false;
+  bool fullscreen = false; // oculta appbar y barra de pestañas // true → se ve la pantalla de terminales
 
   void open(Host host) {
     tabs.add(TerminalTab(host));
@@ -289,13 +291,18 @@ class _TerminalTabsScreenState extends State<TerminalTabsScreen> {
   Widget build(BuildContext context) {
     if (_tabs.isEmpty) return const SizedBox();
 
+    final fullscreen = _hub.fullscreen;
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
-      resizeToAvoidBottomInset: true,
-      appBar: _buildAppBar(),
-      body: Column(
+      backgroundColor: TermThemes.current.background,
+      resizeToAvoidBottomInset: false,
+      appBar: fullscreen ? null : _buildAppBar(),
+      body: Padding(
+        // Inset del teclado a mano, pegado al píxel (sin hueco fantasma)
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
         children: [
-          _buildTabBar(),
+          if (!fullscreen) _buildTabBar(),
           Expanded(
             // IndexedStack mantiene el estado de todos los terminales en memoria
             child: IndexedStack(
@@ -324,6 +331,7 @@ class _TerminalTabsScreenState extends State<TerminalTabsScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

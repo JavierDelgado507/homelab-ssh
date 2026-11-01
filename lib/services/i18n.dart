@@ -192,6 +192,8 @@ const _es = <String, String>{
   'Known host keys (trust on first use)':
       'Huellas conocidas (se fían del primer uso)',
   'About': 'Acerca de',
+  'Terminal theme': 'Tema del terminal',
+  'Could not open the link': 'No se pudo abrir el enlace',
   'Language': 'Idioma',
   'Not a Homelab SSH backup': 'No es una copia de Homelab SSH',
   // Bloqueo
