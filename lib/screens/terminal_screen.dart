@@ -880,6 +880,29 @@ class TerminalScreenState extends State<TerminalScreen>
     _terminalController.clearSelection();
   }
 
+  // Copia la selección como UNA sola línea: filas recortadas y unidas con
+  // espacios. Para comandos que una TUI (p. ej. Claude Code) parte en varias
+  // filas dibujadas: el terminal no puede saber que eran un párrafo.
+  void _copySelectionJoined() {
+    final sel = _terminalController.selection;
+    if (sel == null) return;
+    final text = _terminal.buffer
+        .getText(sel)
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .join(' ');
+    Clipboard.setData(ClipboardData(text: text));
+    _terminalController.clearSelection();
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(tr('Copied as one line')),
+        duration: const Duration(milliseconds: 1200),
+        behavior: SnackBarBehavior.floating,
+      ));
+  }
+
   // ── Scroll + inercia ─────────────────────────────────────────────────────────
   void _applyScrollDelta(double delta, Offset at) {
     if (_terminal.isUsingAltBuffer) {
@@ -1678,8 +1701,37 @@ class TerminalScreenState extends State<TerminalScreen>
                       ),
                     Positioned(
                       top: 8, right: 8,
-                      child: GestureDetector(
-                        onTap: _copySelection,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        GestureDetector(
+                          onTap: _copySelectionJoined,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: kAccent2.withOpacity(0.92),
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Colors.black38, blurRadius: 6)
+                              ],
+                            ),
+                            child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.wrap_text,
+                                      size: 15, color: Colors.black),
+                                  const SizedBox(width: 6),
+                                  Text(tr('1 line'),
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black)),
+                                ]),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _copySelection,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                           decoration: BoxDecoration(
@@ -1695,7 +1747,8 @@ class TerminalScreenState extends State<TerminalScreen>
                                 color: Colors.black)),
                           ]),
                         ),
-                      ),
+                        ),
+                      ]),
                     ),
                   ]);
                 },

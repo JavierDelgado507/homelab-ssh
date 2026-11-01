@@ -193,6 +193,8 @@ const _es = <String, String>{
       'Huellas conocidas (se fían del primer uso)',
   'About': 'Acerca de',
   'Terminal theme': 'Tema del terminal',
+  '1 line': '1 línea',
+  'Copied as one line': 'Copiado en una sola línea',
   'Could not open the link': 'No se pudo abrir el enlace',
   'Language': 'Idioma',
   'Not a Homelab SSH backup': 'No es una copia de Homelab SSH',
