@@ -1395,7 +1395,7 @@ class TerminalScreenState extends State<TerminalScreen>
                   child: Container(
                     height: 30,
                     margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1404,7 +1404,7 @@ class TerminalScreenState extends State<TerminalScreen>
                       TabsHub.instance.fullscreen
                           ? Icons.fullscreen_exit
                           : Icons.fullscreen,
-                      size: 17,
+                      size: 20,
                       color: TabsHub.instance.fullscreen ? kAccent : kTextSec,
                     ),
                   ),
@@ -1414,12 +1414,12 @@ class TerminalScreenState extends State<TerminalScreen>
                   child: Container(
                     height: 30,
                     margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.copy_all, size: 17, color: kTextSec),
+                    child: const Icon(Icons.copy_all, size: 20, color: kTextSec),
                   ),
                 ),
                 GestureDetector(
@@ -1427,14 +1427,14 @@ class TerminalScreenState extends State<TerminalScreen>
                   child: Container(
                     height: 30,
                     margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
                     alignment: Alignment.center,
                     child: Icon(
                       _kbOn ? Icons.keyboard_hide : Icons.keyboard,
-                      size: 17, color: _kbOn ? kAccent : kTextSec,
+                      size: 20, color: _kbOn ? kAccent : kTextSec,
                     ),
                   ),
                 ),
@@ -1443,13 +1443,14 @@ class TerminalScreenState extends State<TerminalScreen>
                   child: Container(
                     height: 30,
                     margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
                     alignment: Alignment.center,
                     child: Text(tr('{}'),
-                        style: TextStyle(fontSize: 13, color: kTextSec, height: 1)),
+                        style: const TextStyle(
+                            fontSize: 14, color: kTextSec, height: 1)),
                   ),
                 ),
                 if (_connected && _client != null)
@@ -1458,14 +1459,14 @@ class TerminalScreenState extends State<TerminalScreen>
                     child: Container(
                       height: 30,
                       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                       ),
                       alignment: Alignment.center,
                       child: Text(tr('SFTP'),
                           style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600,
+                              fontSize: 12, fontWeight: FontWeight.w600,
                               color: kAccent2, height: 1)),
                     ),
                   ),
