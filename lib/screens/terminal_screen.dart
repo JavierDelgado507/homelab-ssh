@@ -1317,16 +1317,16 @@ class TerminalScreenState extends State<TerminalScreen>
     return GestureDetector(
       onTap: () { onTap(); _refocus(); },
       child: Container(
-        constraints: const BoxConstraints(minWidth: 44),
+        constraints: const BoxConstraints(minWidth: 38),
         height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+        margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
         decoration: BoxDecoration(
           color: active ? color.withOpacity(0.22) : const Color(0xFF1E2740),
           borderRadius: BorderRadius.circular(6),
           border: active ? Border.all(color: color.withOpacity(0.7)) : null,
         ),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Text(label,
             style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w600,
@@ -1394,8 +1394,8 @@ class TerminalScreenState extends State<TerminalScreen>
                   onTap: _toggleFullscreen,
                   child: Container(
                     height: 30,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1413,8 +1413,8 @@ class TerminalScreenState extends State<TerminalScreen>
                   onTap: _copyScreen,
                   child: Container(
                     height: 30,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1426,8 +1426,8 @@ class TerminalScreenState extends State<TerminalScreen>
                   onTap: _toggleKeyboard,
                   child: Container(
                     height: 30,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1442,8 +1442,8 @@ class TerminalScreenState extends State<TerminalScreen>
                   onTap: _openSnippets,
                   child: Container(
                     height: 30,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                     ),
@@ -1457,8 +1457,8 @@ class TerminalScreenState extends State<TerminalScreen>
                     onTap: _openSftp,
                     child: Container(
                       height: 30,
-                      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E2740), borderRadius: BorderRadius.circular(6),
                       ),
