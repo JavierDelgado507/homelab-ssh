@@ -17,98 +17,12 @@ import '../services/ssh_connect_service.dart';
 import '../services/term_themes.dart';
 import '../services/storage_service.dart';
 import '../services/ssh_keepalive_service.dart';
+import '../services/jump_tracker.dart';
+import 'terminal/term_keys.dart';
+import '../services/url_finder.dart';
 import 'sftp_screen.dart';
 import 'terminal_tabs_screen.dart' show TabsHub;
 import 'snippets_screen.dart';
-
-// ── Secuencias de escape ─────────────────────────────────────────────────────
-const _kEsc    = '\x1b';
-const _kTab    = '\t';
-const _kEnter  = '\r';
-const _kBs     = '\x7f';
-const _kDel    = '\x1b[3~';
-const _kIns    = '\x1b[2~';
-const _kUp     = '\x1b[A';
-const _kDown   = '\x1b[B';
-const _kRight  = '\x1b[C';
-const _kLeft   = '\x1b[D';
-const _kPgUp   = '\x1b[5~';
-const _kPgDown = '\x1b[6~';
-const _kHome   = '\x1b[H';
-const _kEnd    = '\x1b[F';
-const _kShTab  = '\x1b[Z';
-const _kF1  = '\x1bOP';  const _kF2  = '\x1bOQ';
-const _kF3  = '\x1bOR';  const _kF4  = '\x1bOS';
-const _kF5  = '\x1b[15~'; const _kF6 = '\x1b[17~';
-const _kF7  = '\x1b[18~'; const _kF8 = '\x1b[19~';
-const _kF9  = '\x1b[20~'; const _kF10= '\x1b[21~';
-const _kF11 = '\x1b[23~'; const _kF12= '\x1b[24~';
-// Teclas Fn en popup (F13-F20 eliminadas)
-
-
-class _Key {
-  final String label;
-  final String seq;
-  final IconData? icon;
-  const _Key(this.label, this.seq, {this.icon});
-}
-
-const _rowNav = [
-  _Key('ESC', _kEsc),  _Key('TAB', _kTab),  _Key('⇤', _kShTab),
-  _Key('', _kUp,    icon: Icons.keyboard_arrow_up),
-  _Key('', _kDown,  icon: Icons.keyboard_arrow_down),
-  _Key('', _kLeft,  icon: Icons.keyboard_arrow_left),
-  _Key('', _kRight, icon: Icons.keyboard_arrow_right),
-  _Key('Home', _kHome), _Key('End', _kEnd),
-  _Key('PgUp', _kPgUp), _Key('PgDn', _kPgDown),
-  _Key('Ins', _kIns),   _Key('Del', _kDel),
-  _Key('↵', _kEnter),   _Key('⌫', _kBs),
-];
-
-const _rowSym = [
-  _Key('|','|'), _Key('~','~'), _Key('/','/' ), _Key(':',':'),
-  _Key('-','-'), _Key('_','_'), _Key('&','&'), _Key('+','+'),
-  _Key('=','='), _Key(';',';'),
-  _Key(r'$',r'$'), _Key('%','%'), _Key('@','@'), _Key('#','#'),
-  _Key('!','!'), _Key('`','`'), _Key('.','.'), _Key('*','*'),
-  _Key('^','^'), _Key('<','<'), _Key('>','>'),
-  _Key('(','('), _Key(')',')'), _Key('{','{'), _Key('}','}'),
-  _Key('[','['), _Key(']',']'), _Key("'","'"),
-  _Key('"','"'), _Key('\\','\\'), _Key('?','?'),
-];
-
-const _rowCtrl = [
-  _Key('^A','\x01'), _Key('^B','\x02'), _Key('^C','\x03'),
-  _Key('^D','\x04'), _Key('^E','\x05'), _Key('^F','\x06'),
-  _Key('^G','\x07'), _Key('^H','\x08'), _Key('^I','\x09'),
-  _Key('^J','\x0a'), _Key('^K','\x0b'), _Key('^L','\x0c'),
-  _Key('^M','\x0d'), _Key('^N','\x0e'), _Key('^O','\x0f'),
-  _Key('^P','\x10'), _Key('^Q','\x11'), _Key('^R','\x12'),
-  _Key('^S','\x13'), _Key('^T','\x14'), _Key('^U','\x15'),
-  _Key('^V','\x16'), _Key('^W','\x17'), _Key('^X','\x18'),
-  _Key('^Y','\x19'), _Key('^Z','\x1a'),
-];
-
-const _rowFn = [
-  _Key('F1',_kF1),  _Key('F2',_kF2),  _Key('F3',_kF3),  _Key('F4',_kF4),
-  _Key('F5',_kF5),  _Key('F6',_kF6),  _Key('F7',_kF7),  _Key('F8',_kF8),
-  _Key('F9',_kF9),  _Key('F10',_kF10), _Key('F11',_kF11), _Key('F12',_kF12),
-];
-
-// Un sitio al que se ha saltado dentro del terminal (ssh o pct enter)
-class _RemoteLoc {
-  final String user;
-  final String host; // vacío en un LXC hasta resolver su IP
-  final int port;
-  final int? lxcId;
-  _RemoteLoc.ssh(this.user, this.host, this.port) : lxcId = null;
-  _RemoteLoc.lxc(this.lxcId)
-      : user = 'root',
-        host = '',
-        port = 22;
-  bool get isLxc => lxcId != null;
-  String get label => isLxc ? 'LXC $lxcId' : '$user@$host:$port';
-}
 
 // ── Widget ───────────────────────────────────────────────────────────────────
 class TerminalScreen extends StatefulWidget {
@@ -377,66 +291,19 @@ class TerminalScreenState extends State<TerminalScreen>
   // apilan; el botón SFTP ofrece también ese sitio. Para un LXC la IP se
   // resuelve preguntando al host por la conexión ya abierta (canal aparte).
   // `exit`/`logout` deshace el salto.
-  final List<_RemoteLoc> _remoteStack = [];
+  final List<RemoteLoc> _remoteStack = [];
 
-  // Flags de ssh que llevan valor detrás (para no confundirlo con el destino)
-  static const _sshValueFlags = {
-    '-i', '-o', '-L', '-R', '-D', '-J', '-F', '-E', '-b', '-c', '-m', '-W'
-  };
 
   void _trackJump(String cmd) {
-    final parts = cmd.split(RegExp(r'\s+'));
-    if (parts.isEmpty) return;
-    if (parts[0] == 'exit' || parts[0] == 'logout') {
+    final ev = parseJumpCommand(cmd);
+    if (ev == null) return;
+    if (ev.pop) {
       if (_remoteStack.isNotEmpty) _remoteStack.removeLast();
-      return;
+    } else if (ev.push != null) {
+      _remoteStack.add(ev.push!);
     }
-    if (parts[0] == 'pct') {
-      int? id;
-      if (parts.length == 3 && parts[1] == 'enter') {
-        id = int.tryParse(parts[2]);
-      } else if (parts.length == 5 &&
-          parts[1] == 'exec' &&
-          parts[3] == '--' &&
-          const {'bash', 'sh', 'zsh', 'ash'}.contains(parts[4])) {
-        id = int.tryParse(parts[2]);
-      }
-      if (id != null) _remoteStack.add(_RemoteLoc.lxc(id));
-      return;
-    }
-    if (parts[0] != 'ssh') return;
-    String? target;
-    String? userFlag;
-    var port = 22;
-    var i = 1;
-    while (i < parts.length) {
-      final p = parts[i];
-      if (p == '-p' && i + 1 < parts.length) {
-        port = int.tryParse(parts[i + 1]) ?? 22;
-        i += 2;
-      } else if (p == '-l' && i + 1 < parts.length) {
-        userFlag = parts[i + 1];
-        i += 2;
-      } else if (_sshValueFlags.contains(p) && i + 1 < parts.length) {
-        i += 2;
-      } else if (p.startsWith('-')) {
-        i++;
-      } else {
-        target = p;
-        i++;
-        break;
-      }
-    }
-    if (target == null) return;
-    if (i < parts.length) return; // "ssh host comando" no cambia de sitio
-    final m = RegExp(r'^(?:([\w.\-]+)@)?([\w.\-]+)$').firstMatch(target);
-    if (m == null) return;
-    _remoteStack.add(_RemoteLoc.ssh(
-      m.group(1) ?? userFlag ?? 'root',
-      m.group(2)!,
-      port,
-    ));
   }
+
 
   void _updateSuggestions() {
     final prefix = _lineBuf.toString();
@@ -615,7 +482,7 @@ class TerminalScreenState extends State<TerminalScreen>
         sendCmd(cmd, 300);
       }
     } catch (e) {
-      _writeInfo('\r\n[Error: $e]\r\n');
+      _writeInfo('\r\n[${humanizeSshError(e)}]\r\n');
       final msg = e.toString().toLowerCase();
       final authFail = msg.contains('auth') || msg.contains('hostkey');
       _setStatus(false, authFail ? tr('Authentication failed') : 'Error');
@@ -821,31 +688,23 @@ class TerminalScreenState extends State<TerminalScreen>
   }
 
   // Abrir con un toque las URLs que aparezcan en la salida del terminal
-  static final _urlRe = RegExp(r'https?://[^\s' r"'" r'"<>\[\]{}|\\^`]+');
-
   Future<void> _maybeOpenUrl(Offset pos) async {
     try {
       final render = _terminalViewKey.currentState?.renderTerminal;
       if (render == null) return;
       final cell = render.getCellOffset(pos);
       if (cell.y >= _terminal.buffer.lines.length) return;
-      final line = _terminal.buffer.lines[cell.y].getText();
-      for (final m in _urlRe.allMatches(line)) {
-        if (cell.x < m.start || cell.x >= m.end) continue;
-        var url = m.group(0)!;
-        while (url.isNotEmpty && '.,;:)]'.contains(url[url.length - 1])) {
-          url = url.substring(0, url.length - 1);
-        }
-        final ok = await launchUrl(Uri.parse(url),
-            mode: LaunchMode.externalApplication);
-        if (!ok && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(tr('Could not open the link'))));
-        }
-        return;
+      final url = urlAt(_terminal.buffer.lines[cell.y].getText(), cell.x);
+      if (url == null) return;
+      final ok = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('Could not open the link'))));
       }
     } catch (_) {}
   }
+
 
   // Pantalla completa: oculta appbar, pestañas y barra de estado de Android
   void _toggleFullscreen() {
@@ -861,14 +720,14 @@ class TerminalScreenState extends State<TerminalScreen>
     if (mounted) setState(() {});
   }
 
-  void _sendKey(_Key key) {
+  void _sendKey(TermKey key) {
     _clearLineBuf(); // flechas/Esc/etc. desalinean la línea rastreada
     String seq = key.seq;
     // Shift+Tab: independientemente del botón pulsado, si SHIFT activo + TAB
-    if (_shiftActive && seq == _kTab) seq = _kShTab;
+    if (_shiftActive && seq == kKeyTab) seq = kKeyShTab;
     if (_altActive)  { seq = '\x1b$seq'; setState(() => _altActive  = false); }
     if (_ctrlActive) { setState(() => _ctrlActive = false); }
-    if (_shiftActive && seq != _kShTab) setState(() => _shiftActive = false);
+    if (_shiftActive && seq != kKeyShTab) setState(() => _shiftActive = false);
     _sendRaw(seq);
     _refocus();
   }
@@ -1009,7 +868,7 @@ class TerminalScreenState extends State<TerminalScreen>
   // nada con estado up; por eso se genera aquí con los códigos estándar 64/65.
   void _sendWheel(bool up, Offset localPos) {
     if (!_terminal.mouseMode.reportScroll) {
-      _sendRaw(up ? _kPgUp : _kPgDown);
+      _sendRaw(up ? kKeyPgUp : kKeyPgDown);
       return;
     }
     var x = 1, y = 1;
@@ -1353,7 +1212,7 @@ class TerminalScreenState extends State<TerminalScreen>
   }
 
   // ── Widgets ────────────────────────────────────────────────────────────────
-  Widget _keyBtn(_Key key, {Color? labelColor}) {
+  Widget _keyBtn(TermKey key, {Color? labelColor}) {
     return GestureDetector(
       onTap: () => _sendKey(key),
       child: Container(
@@ -1565,10 +1424,10 @@ class TerminalScreenState extends State<TerminalScreen>
             child: TabBarView(
               controller: _tabCtrl,
               children: [
-                _scrollRow(_rowNav),
-                _scrollRow(_rowSym),
-                _scrollRow(_rowCtrl, labelColor: const Color(0xFFFF9F43)),
-                _scrollRow(_rowFn),
+                _scrollRow(kRowNav),
+                _scrollRow(kRowSym),
+                _scrollRow(kRowCtrl, labelColor: const Color(0xFFFF9F43)),
+                _scrollRow(kRowFn),
               ],
             ),
           ),
@@ -1577,7 +1436,7 @@ class TerminalScreenState extends State<TerminalScreen>
     );
   }
 
-  Widget _scrollRow(List<_Key> keys, {Color? labelColor}) {
+  Widget _scrollRow(List<TermKey> keys, {Color? labelColor}) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1850,12 +1709,12 @@ class TerminalScreenState extends State<TerminalScreen>
                         _swipeY += d.focalPointDelta.dy;
                         while (_swipeX.abs() >= _kSwipeStep &&
                                _swipeX.abs() >= _swipeY.abs()) {
-                          _sendRaw(_swipeX > 0 ? _kRight : _kLeft);
+                          _sendRaw(_swipeX > 0 ? kKeyRight : kKeyLeft);
                           _swipeX += _swipeX > 0 ? -_kSwipeStep : _kSwipeStep;
                         }
                         while (_swipeY.abs() >= _kSwipeStep &&
                                _swipeY.abs() >= _swipeX.abs()) {
-                          _sendRaw(_swipeY > 0 ? _kDown : _kUp);
+                          _sendRaw(_swipeY > 0 ? kKeyDown : kKeyUp);
                           _swipeY += _swipeY > 0 ? -_kSwipeStep : _kSwipeStep;
                         }
                       }

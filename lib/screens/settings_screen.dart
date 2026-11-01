@@ -5,15 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../main.dart';
 import '../services/i18n.dart';
+import '../services/update_service.dart';
 import '../services/term_themes.dart';
 import '../services/backup_service.dart';
 import '../services/storage_service.dart';
 import 'hostkeys_screen.dart';
-
-const kAppVersion = '6.12.0';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -98,6 +99,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (sel != null) {
       await TermThemes.set(sel);
       if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _checkUpdates() async {
+    _snack(tr('Checking…'));
+    final info = await UpdateService.check();
+    if (!mounted) return;
+    if (info == null) {
+      _snack(tr('Could not reach GitHub'));
+      return;
+    }
+    if (!info.isNewer) {
+      _snack('${tr('You are up to date')} ($kAppVersion)');
+      return;
+    }
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('${tr('New version available')}: ${info.version}',
+            style: const TextStyle(color: kTextPri, fontSize: 16)),
+        content: Text(
+          '${tr('Installed')}: $kAppVersion',
+          style: const TextStyle(color: kTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(tr('Cancel'), style: const TextStyle(color: kTextSec)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(tr('Open release'),
+                style: const TextStyle(
+                    color: kAccent, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (go == true) {
+      await launchUrl(Uri.parse(info.url),
+          mode: LaunchMode.externalApplication);
     }
   }
 
@@ -325,6 +369,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             tr('Terminal theme'),
             TermThemes.notifier.value,
             _pickTheme,
+          ),
+          _tile(
+            Icons.system_update_alt,
+            kSuccess,
+            tr('Check for updates'),
+            tr('One request to GitHub, only when you tap'),
+            _checkUpdates,
           ),
           _tile(
             Icons.info_outline,

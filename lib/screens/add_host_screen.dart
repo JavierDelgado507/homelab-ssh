@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models/host.dart';
 import '../models/ssh_key.dart';
 import '../services/i18n.dart';
+import '../services/ssh_connect_service.dart';
 import '../services/storage_service.dart';
 
 class AddHostScreen extends StatefulWidget {
@@ -112,7 +113,7 @@ class _AddHostScreenState extends State<AddHostScreen> {
     } on TimeoutException {
       return 'No response (connection timed out)';
     } catch (e) {
-      return e.toString().replaceFirst(RegExp(r'^\w*Exception:? ?'), '');
+      return humanizeSshError(e);
     } finally {
       client?.close();
       socket?.destroy();

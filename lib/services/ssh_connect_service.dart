@@ -4,9 +4,34 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
-import '../services/i18n.dart';
 import '../models/host.dart';
+import 'i18n.dart';
 import 'storage_service.dart';
+
+/// Traduce las excepciones típicas de una conexión SSH a un mensaje claro.
+String humanizeSshError(Object e) {
+  final msg = e.toString();
+  final low = msg.toLowerCase();
+  if (low.contains('timed out') || low.contains('timeout')) {
+    return tr('No response (connection timed out)');
+  }
+  if (low.contains('refused')) {
+    return tr('Connection refused (is SSH listening on that port?)');
+  }
+  if (low.contains('failed host lookup') || low.contains('name or service')) {
+    return tr('Hostname not found');
+  }
+  if (low.contains('unreachable') || low.contains('no route')) {
+    return tr('Host unreachable (check the network)');
+  }
+  if (low.contains('hostkey')) {
+    return tr('Host key rejected');
+  }
+  if (low.contains('auth')) {
+    return tr('Authentication failed (wrong password or key)');
+  }
+  return msg.replaceFirst(RegExp(r'^\w*Exception:? ?'), '');
+}
 
 /// Pregunta al usuario qué hacer cuando la huella guardada no coincide.
 /// Devuelve true para confiar y actualizar la huella.

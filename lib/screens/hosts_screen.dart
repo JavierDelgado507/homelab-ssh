@@ -6,6 +6,7 @@ import '../models/host.dart';
 import '../services/i18n.dart';
 import '../services/os_icons.dart';
 import '../services/storage_service.dart';
+import '../services/target_parser.dart';
 import '../services/ssh_keepalive_service.dart';
 import 'add_host_screen.dart';
 import 'discover_screen.dart';
@@ -126,38 +127,8 @@ class _HostsScreenState extends State<HostsScreen> {
     return gs;
   }
 
-  // Entiende "usuario@host:puerto", "ssh usuario@host -p puerto" o una IP
-  static ({String user, String host, int port})? _parseTarget(String input) {
-    var s = input.trim();
-    final hadSshPrefix = s.toLowerCase().startsWith('ssh ');
-    if (hadSshPrefix) s = s.substring(4).trim();
-    int? pFlag;
-    final mp = RegExp(r'\s+-p\s*(\d{1,5})\s*$').firstMatch(s);
-    if (mp != null) {
-      pFlag = int.tryParse(mp.group(1)!);
-      s = s.substring(0, mp.start).trim();
-    }
-    final m =
-        RegExp(r'^(?:([\w.\-]+)@)?([\w.\-]+)(?::(\d{1,5}))?$').firstMatch(s);
-    if (m == null) return null;
-    final host = m.group(2)!;
-    // Una palabra suelta es búsqueda normal, salvo que venga de "ssh …" o -p
-    if (!hadSshPrefix &&
-        pFlag == null &&
-        m.group(1) == null &&
-        m.group(3) == null &&
-        !host.contains('.')) {
-      return null;
-    }
-    return (
-      user: m.group(1) ?? 'root',
-      host: host,
-      port: pFlag ?? int.tryParse(m.group(3) ?? '') ?? 22,
-    );
-  }
-
   ({String user, String host, int port})? get _quickTarget =>
-      _parseTarget(_query);
+      parseTarget(_query);
 
   // Diálogo de conexión rápida: dirección editable + contraseña; abre
   // terminal o SFTP según [sftp].
@@ -226,7 +197,7 @@ class _HostsScreenState extends State<HostsScreen> {
       ),
     );
     if (ok != true) return;
-    final t = _parseTarget(addrCtrl.text);
+    final t = parseTarget(addrCtrl.text);
     if (t == null) {
       _snack('Invalid address');
       return;

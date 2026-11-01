@@ -30,6 +30,12 @@ class BackupService {
 
   static Future<Uint8List> export(String password) async {
     final data = await StorageService.dumpAll();
+    return encryptPayload(data, password);
+  }
+
+  /// Cifra un volcado clave→valor (pura: sin tocar el almacén; testeable).
+  static Future<Uint8List> encryptPayload(
+      Map<String, String> data, String password) async {
     final plain = utf8.encode(jsonEncode(data));
 
     final rnd = Random.secure();
@@ -51,6 +57,15 @@ class BackupService {
   /// Lanza [FormatException] si el fichero no es válido y
   /// [SecretBoxAuthenticationError] si la contraseña es incorrecta.
   static Future<int> import(Uint8List bytes, String password) async {
+    final data = await decryptPayload(bytes, password);
+    await StorageService.restoreAll(data);
+    return data.length;
+  }
+
+  /// Descifra una copia (pura). Lanza [FormatException] si el fichero no es
+  /// válido y error de autenticación AES si la contraseña no es la buena.
+  static Future<Map<String, String>> decryptPayload(
+      Uint8List bytes, String password) async {
     if (bytes.length < 5 + 16 + 12 + 16 ||
         ascii.decode(bytes.sublist(0, 5)) != _magic) {
       throw const FormatException('Not a Homelab SSH backup');
@@ -66,9 +81,7 @@ class BackupService {
       secretKey: key,
     );
 
-    final data = (jsonDecode(utf8.decode(plain)) as Map<String, dynamic>)
+    return (jsonDecode(utf8.decode(plain)) as Map<String, dynamic>)
         .map((k, v) => MapEntry(k, v as String));
-    await StorageService.restoreAll(data);
-    return data.length;
   }
 }

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../main.dart';
 import '../models/host.dart';
 import '../services/i18n.dart';
+import '../services/i18n.dart';
 import '../services/ssh_connect_service.dart';
 
 /// Explorador SFTP. Se puede abrir de dos formas:
@@ -64,7 +65,9 @@ class _SftpScreenState extends State<SftpScreen> {
       _initialized = true;
       await _listDir('/');
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) {
+        setState(() { _error = humanizeSshError(e); _loading = false; });
+      }
     }
   }
 

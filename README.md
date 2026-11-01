@@ -70,8 +70,9 @@ to the debug signature.
 ## Privacy
 
 There is no telemetry, no analytics and no network traffic other than the
-SSH/SFTP connections you open. Credentials never leave your device except
-inside the encrypted backups you export yourself.
+SSH/SFTP connections you open — plus one request to the GitHub API if you
+tap "Check for updates" in Settings, and only then. Credentials never leave
+your device except inside the encrypted backups you export yourself.
 
 ## License
 
