@@ -4,6 +4,7 @@ import 'package:quick_actions/quick_actions.dart';
 import '../main.dart';
 import '../models/host.dart';
 import '../services/i18n.dart';
+import '../services/os_icons.dart';
 import '../services/storage_service.dart';
 import '../services/ssh_keepalive_service.dart';
 import 'add_host_screen.dart';
@@ -551,14 +552,16 @@ class _HostsScreenState extends State<HostsScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    _initials(host.name),
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: osIcon(host.osId) != null
+                      ? Icon(osIcon(host.osId), color: color, size: 22)
+                      : Text(
+                          _initials(host.name),
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 14),
                 // Info del host

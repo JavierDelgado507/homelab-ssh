@@ -13,6 +13,7 @@ class Host {
   String startupCmd; // comando que se manda nada más abrir la shell ('' = nada)
   String? jumpHostId; // ProxyJump: id de otro host por el que saltar
   String group;       // etiqueta de grupo ('' = sin grupo)
+  String? osId;       // sistema detectado al conectar (debian, proxmox, …)
   bool useTmux;       // sesión persistente: tmux new -A al conectar
 
   Host({
@@ -26,6 +27,7 @@ class Host {
     this.startupCmd = '',
     this.jumpHostId,
     this.group = '',
+    this.osId,
     this.useTmux = false,
   }) : id = id ?? _uuid.v4();
 
@@ -40,6 +42,7 @@ class Host {
         startupCmd: (j['startupCmd'] as String?) ?? '',
         jumpHostId: j['jumpHostId'] as String?,
         group: (j['group'] as String?) ?? '',
+        osId: j['osId'] as String?,
         useTmux: (j['useTmux'] as bool?) ?? false,
       );
 
@@ -54,6 +57,7 @@ class Host {
         if (startupCmd.isNotEmpty) 'startupCmd': startupCmd,
         if (jumpHostId != null) 'jumpHostId': jumpHostId,
         if (group.isNotEmpty) 'group': group,
+        if (osId != null) 'osId': osId,
         if (useTmux) 'useTmux': useTmux,
       };
 }

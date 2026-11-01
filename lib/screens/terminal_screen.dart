@@ -593,6 +593,7 @@ class TerminalScreenState extends State<TerminalScreen>
       _setStatus(true, h.hostname);
       _reconnectAttempt = 0;
       _remoteStack.clear();
+      _detectOs(h);
       // Sesión persistente: engancha (o crea) la sesión tmux "hssh". Al
       // reconectar se vuelve exactamente donde se estaba (sucedáneo de mosh).
       void sendCmd(String cmd, int delayMs) {
@@ -1139,6 +1140,45 @@ class TerminalScreenState extends State<TerminalScreen>
     final closedBySystem = _kbWasVisible && !visible && _kbOn;
     _kbWasVisible = visible;
     if (closedBySystem) setState(() => _kbOn = false);
+  }
+
+  // Detecta el SO del host por la conexión ya abierta y lo guarda para que
+  // su tarjeta muestre el logo (Debian, Proxmox, …) en vez de iniciales.
+  Future<void> _detectOs(Host h) async {
+    final client = _client;
+    if (client == null) return;
+    try {
+      final out = utf8.decode(
+        await client.run(
+            r"sh -c '. /etc/os-release 2>/dev/null; echo ${ID:-}; [ -d /etc/pve ] && echo pve; uname -s'"),
+        allowMalformed: true,
+      );
+      final lines = out
+          .split('\n')
+          .map((l) => l.trim().toLowerCase())
+          .where((l) => l.isNotEmpty)
+          .toList();
+      const unames = {'linux', 'freebsd', 'darwin', 'sunos'};
+      String? id;
+      if (lines.contains('pve')) {
+        id = 'proxmox';
+      } else {
+        final fromRelease = lines
+            .where((l) => l != 'pve' && !unames.contains(l))
+            .toList();
+        id = fromRelease.isNotEmpty
+            ? fromRelease.first
+            : (lines.isEmpty ? null : lines.last);
+      }
+      if (id == null || id.isEmpty || h.osId == id) return;
+      final hosts = await StorageService.getHosts();
+      final idx = hosts.indexWhere((x) => x.id == h.id);
+      if (idx < 0) return; // host temporal (conexión rápida): no se guarda
+      hosts[idx].osId = id;
+      await StorageService.saveHosts(hosts);
+      h.osId = id;
+      kDataChanged.value++;
+    } catch (_) {}
   }
 
   // ── SFTP: a la conexión original, o a donde hayas saltado con ssh ──────────
