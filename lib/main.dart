@@ -263,6 +263,14 @@ class _RootScreenState extends State<RootScreen> {
   }
 }
 
+/// Pestaña activa del menú inicial; otras pantallas pueden pedir un cambio
+/// (p. ej. volver a Hosts tras importar una copia).
+final ValueNotifier<int> kHomeTab = ValueNotifier(0);
+
+/// Aviso global de «los datos han cambiado» (tras importar una copia): las
+/// pestañas que cachean listas se recargan al oírlo.
+final ValueNotifier<int> kDataChanged = ValueNotifier(0);
+
 /// Menú inicial estilo Termius: secciones con barra inferior.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -272,7 +280,23 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  int get _index => kHomeTab.value;
+
+  @override
+  void initState() {
+    super.initState();
+    kHomeTab.addListener(_onTab);
+  }
+
+  @override
+  void dispose() {
+    kHomeTab.removeListener(_onTab);
+    super.dispose();
+  }
+
+  void _onTab() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +330,7 @@ class _HomeShellState extends State<HomeShell> {
         ),
         child: NavigationBar(
           selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          onDestinationSelected: (i) => kHomeTab.value = i,
           destinations: [
             const NavigationDestination(
                 icon: Icon(Icons.dns_outlined), label: 'Hosts'),

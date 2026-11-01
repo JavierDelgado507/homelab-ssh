@@ -36,6 +36,13 @@ class _SnippetsScreenState extends State<SnippetsScreen> {
   void initState() {
     super.initState();
     _load();
+    kDataChanged.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    kDataChanged.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {

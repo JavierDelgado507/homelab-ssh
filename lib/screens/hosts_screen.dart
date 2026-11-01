@@ -36,6 +36,7 @@ class _HostsScreenState extends State<HostsScreen> {
   void initState() {
     super.initState();
     _load();
+    kDataChanged.addListener(_load);
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text));
     SshKeepaliveService.requestPermissions();
     // Accesos directos al mantener pulsado el icono de la app
@@ -49,6 +50,7 @@ class _HostsScreenState extends State<HostsScreen> {
 
   @override
   void dispose() {
+    kDataChanged.removeListener(_load);
     _searchCtrl.dispose();
     super.dispose();
   }

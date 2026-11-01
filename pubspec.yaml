@@ -1,6 +1,6 @@
 name: homelab_ssh
 description: Cliente SSH personal para homelab
-version: 6.12.0+61
+version: 6.12.1+62
 publish_to: 'none'
 
 environment:

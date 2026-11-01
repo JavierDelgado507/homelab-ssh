@@ -137,6 +137,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (pw == null) return;
     try {
       final n = await BackupService.import(res.files.first.bytes!, pw);
+      await Tr.load(); // la copia puede traer otro idioma guardado
+      kDataChanged.value++; // recargar hosts, claves y snippets
+      kHomeTab.value = 0; // volver a Hosts para ver el resultado
+      StorageService.getAppLock().then((v) {
+        if (mounted) setState(() => _appLock = v);
+      });
       _snack(Tr.es ? 'Copia restaurada ($n entradas)' : 'Backup restored ($n entries)');
     } on FormatException catch (e) {
       _snack(e.message);
