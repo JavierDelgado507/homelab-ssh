@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.apk
+
+# Release signing (never commit)
+android/key.properties
+android/keystore-password.txt
+android/app/*.jks
+android/app/*.keystore
+
+# Private deploy scripts (contain local credentials)
+deploy/
+
+# Local docs not meant for the public repo
+BUILD.md

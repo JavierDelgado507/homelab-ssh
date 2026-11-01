@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: #0A0E1A;
+      overflow: hidden;
+    }
+    #terminal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+    }
+    /* Scrollbar estilo Termius */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(78,205,196,0.3); border-radius: 3px; }
+  </style>
+  <script src="xterm.min.js"></script>
+  <script src="addon-fit.min.js"></script>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script>
+    // Tema Termius
+    var terminusTheme = {
+      background:    '#0A0E1A',
+      foreground:    '#CDD6F4',
+      cursor:        '#4ECDC4',
+      cursorAccent:  '#0A0E1A',
+      selectionBackground: 'rgba(78,205,196,0.25)',
+      black:         '#1E2740',
+      red:           '#FF6B6B',
+      green:         '#4ECDC4',
+      yellow:        '#FFD93D',
+      blue:          '#5B8AF5',
+      magenta:       '#C77DFF',
+      cyan:          '#4FC3F7',
+      white:         '#CDD6F4',
+      brightBlack:   '#45506A',
+      brightRed:     '#FF8E8E',
+      brightGreen:   '#6BDED8',
+      brightYellow:  '#FFE566',
+      brightBlue:    '#7BA4FF',
+      brightMagenta: '#D89FFF',
+      brightCyan:    '#72D4F9',
+      brightWhite:   '#E8EAF0',
+    };
+
+    var term = new Terminal({
+      fontSize: 14,
+      fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", "Courier New", monospace',
+      lineHeight: 1.2,
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      scrollback: 10000,
+      theme: terminusTheme,
+      allowTransparency: false,
+      macOptionIsMeta: true,
+    });
+
+    var fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+
+    function doFit() {
+      try { fitAddon.fit(); } catch(e) {}
+    }
+
+    doFit();
+
+    term.onData(function(data) {
+      TerminalInput.postMessage(data);
+    });
+
+    term.onResize(function(e) {
+      TerminalResize.postMessage(JSON.stringify({ cols: e.cols, rows: e.rows }));
+    });
+
+    function writeBinary(b64) {
+      var binary = atob(b64);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      term.write(bytes);
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', doFit);
+    }
+    window.addEventListener('resize', doFit);
+
+    window.addEventListener('load', function() {
+      doFit();
+      term.focus();
+      TerminalReady.postMessage('ready');
+    });
+  </script>
+</body>
+</html>
